@@ -1,9 +1,24 @@
-@CrossOrigin(origins = "*") // This allows your phone to talk to the Java code
-@RestController
-@RequestMapping("/api/auth")
+// This allows your phone to talk to the Java code
 package prolink.controllers;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import prolink.repositories.UserRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import prolink.models.User;
+
+import java.util.Map;
+
+@RestController // REQUIRED: Tells Spring this is a web controller
+@RequestMapping("/api/auth") // REQUIRED: Matches your Flutter baseUrl
+@CrossOrigin(origins = "*") // REQUIRED: Allows your phone to talk to your laptop
 public class AuthController {
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> payload) {
         // 1. Extract data from the Flutter Request
@@ -36,5 +51,28 @@ public class AuthController {
         }
 
         return ResponseEntity.ok("Registration Successful");
+    }
+    //This method will look for the email, check the password, and return the user details.
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
+        String email = credentials.get("email");
+        String password = credentials.get("password");
+
+        // 1. Find user by email
+        return userRepository.findByEmail(email)
+                .map(user -> {
+                    // 2. Check Password
+                    if (!user.getPassword().equals(password)) {
+                        return ResponseEntity.status(401).body("Invalid Password");
+                    }
+
+                    // 3. Check Validation Status (The Fix)
+                    if (!user.isValidated()) {
+                        return ResponseEntity.status(403).body("Account not yet validated by Admin");
+                    }
+
+                    return ResponseEntity.ok(user);
+                })
+                .orElse(ResponseEntity.status(404).body("User not found"));
     }
 }

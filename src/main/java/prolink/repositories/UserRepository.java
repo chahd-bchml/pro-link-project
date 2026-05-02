@@ -6,7 +6,7 @@ import prolink.models.User;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Integer> {
 
     // Spring Boot automatically writes the SQL for this!
     Optional<User> findByEmail(String email);
